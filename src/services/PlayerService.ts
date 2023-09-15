@@ -2,6 +2,7 @@ import { Model } from "mongoose";
 import { Player, PlayerDTO } from "src/models/Player";
 import { InjectModel } from '@nestjs/mongoose';
 import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class PlayerService {
@@ -11,18 +12,19 @@ export class PlayerService {
     return this.playerModel.find().exec();
   }
 
-  async cadastrarUsuario(playerDTO: PlayerDTO): Promise<Boolean> {
-    if(playerDTO.password.length < 5) {
-      return false;
+  async cadastrarUsuario(playerDTO: PlayerDTO): Promise<void> {
+    if (!playerDTO.username || playerDTO.password?.length < 5) {
+      throw new Error('Usuario ou senha invalida');
+    }
+
+    if (await this.playerModel.findOne({username: playerDTO.username})) {
+      throw new Error('Usuario já existe');
     }
 
     const newPlayer = new this.playerModel(playerDTO);
-    newPlayer.passwordHash = playerDTO.password;
+    newPlayer.passwordHash = await bcrypt.hash(playerDTO.password, 1);
 
-    if(!newPlayer.save()) {
-      return false;
-    }
+    newPlayer.save();
 
-    return true;
   }
 }
